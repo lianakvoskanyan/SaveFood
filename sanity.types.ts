@@ -220,6 +220,43 @@ export type EditorialPage = {
   seoDescription?: string;
 };
 
+export type AuthAccountReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "authAccount";
+};
+
+export type AuthAccountLookup = {
+  _id: string;
+  _type: "authAccountLookup";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  account?: AuthAccountReference;
+};
+
+export type AuthAccount = {
+  _id: string;
+  _type: "authAccount";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  sealedCredentials?: string;
+  accessHash?: string;
+  createdAt?: string;
+};
+
+export type AppSettings = {
+  _id: string;
+  _type: "appSettings";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  blockedUserHashes?: Array<string>;
+  blockedEmailHashes?: Array<string>;
+};
+
 export type HomePage = {
   _id: string;
   _type: "homePage";
@@ -362,6 +399,10 @@ export type AllSanitySchemaTypes =
   | SanityImageCrop
   | SanityImageHotspot
   | EditorialPage
+  | AuthAccountReference
+  | AuthAccountLookup
+  | AuthAccount
+  | AppSettings
   | HomePage
   | SanityImagePaletteSwatch
   | SanityImagePalette
@@ -416,8 +457,49 @@ export type FOOD_CATEGORIES_QUERY_RESULT = Array<{
 
 // Source: ../app/lib/sanity/queries.ts
 // Variable: MARKETPLACE_OFFERS_QUERY
-// Query: *[_type == "foodOffer"    && publicationStatus == "published"    && quantityRemaining > 0    && pickupEnd > now()    && establishment->isActive == true    && establishment->approvalStatus == "approved"  ] | order(pickupEnd asc) {    _id,    name,    "slug": slug.current,    description,    originalPriceAmd,    discountedPriceAmd,    quantityRemaining,    pickupStart,    pickupEnd,    "images": images[] {      _key,      alt,      asset,      crop,      hotspot    },    "category": category->{      _id,      name,      "slug": slug.current    },    "establishment": establishment->{      _id,      name,      "slug": slug.current,      city,      "image": images[0] {        _key,        alt,        asset,        crop,        hotspot      }    }  }
+// Query: *[_type == "foodOffer"    && publicationStatus == "published"    && defined(name)    && defined(slug.current)    && defined(description)    && defined(category->name)    && defined(establishment->name)    && defined(establishment->slug.current)    && defined(images[0].asset._ref)    && quantityRemaining > 0    && quantityRemaining <= quantity    && originalPriceAmd > 0    && discountedPriceAmd > 0    && discountedPriceAmd <= originalPriceAmd    && pickupStart < pickupEnd    && pickupEnd > now()    && establishment->isActive == true    && establishment->approvalStatus == "approved"    && (!defined($category) || category->slug.current == $category)    && (!defined($city) || establishment->city == $city)    && (!defined($search) || name match $search || description match $search || establishment->name match $search)  ] | order(    select(      $sort == "price-low" => discountedPriceAmd,      $sort == "price-high" => 0 - discountedPriceAmd,      pickupStart    ) asc  ) {    _id,    name,    "slug": slug.current,    description,    originalPriceAmd,    discountedPriceAmd,    quantityRemaining,    pickupStart,    pickupEnd,    "images": images[] {      _key,      alt,      asset,      crop,      hotspot    },    "category": category->{      _id,      name,      "slug": slug.current    },    "establishment": establishment->{      _id,      name,      "slug": slug.current,      city,      address,      "image": images[0] {        _key,        alt,        asset,        crop,        hotspot      }    }  }[0...48]
 export type MARKETPLACE_OFFERS_QUERY_RESULT = Array<{
+  _id: string;
+  name: string | null;
+  slug: string | null;
+  description: string | null;
+  originalPriceAmd: number | null;
+  discountedPriceAmd: number | null;
+  quantityRemaining: number | null;
+  pickupStart: string | null;
+  pickupEnd: string | null;
+  images: Array<{
+    _key: string;
+    alt: string | null;
+    asset: SanityImageAssetReference | null;
+    crop: SanityImageCrop | null;
+    hotspot: SanityImageHotspot | null;
+  }> | null;
+  category: {
+    _id: string;
+    name: string | null;
+    slug: string | null;
+  } | null;
+  establishment: {
+    _id: string;
+    name: string | null;
+    slug: string | null;
+    city: string | null;
+    address: Address | null;
+    image: {
+      _key: string;
+      alt: string | null;
+      asset: SanityImageAssetReference | null;
+      crop: SanityImageCrop | null;
+      hotspot: SanityImageHotspot | null;
+    } | null;
+  } | null;
+}>;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: FEATURED_OFFERS_QUERY
+// Query: *[_type == "foodOffer"    && publicationStatus == "published"    && defined(name)    && defined(slug.current)    && defined(description)    && defined(category->name)    && defined(establishment->name)    && defined(establishment->slug.current)    && defined(images[0].asset._ref)    && quantityRemaining > 0    && quantityRemaining <= quantity    && originalPriceAmd > 0    && discountedPriceAmd > 0    && discountedPriceAmd <= originalPriceAmd    && pickupStart < pickupEnd    && pickupEnd > now()    && establishment->isActive == true    && establishment->approvalStatus == "approved"  ] | order(_createdAt desc)[0...6] {    _id,    name,    "slug": slug.current,    description,    originalPriceAmd,    discountedPriceAmd,    quantityRemaining,    pickupStart,    pickupEnd,    "images": images[] {      _key,      alt,      asset,      crop,      hotspot    },    "category": category->{      _id,      name,      "slug": slug.current    },    "establishment": establishment->{      _id,      name,      "slug": slug.current,      city,      "image": images[0] {        _key,        alt,        asset,        crop,        hotspot      }    }  }
+export type FEATURED_OFFERS_QUERY_RESULT = Array<{
   _id: string;
   name: string | null;
   slug: string | null;
@@ -455,10 +537,285 @@ export type MARKETPLACE_OFFERS_QUERY_RESULT = Array<{
 }>;
 
 // Source: ../app/lib/sanity/queries.ts
+// Variable: MARKETPLACE_CITIES_QUERY
+// Query: array::unique(*[    _type == "establishment"    && isActive == true    && approvalStatus == "approved"    && defined(city)  ].city) | order(@ asc)
+export type MARKETPLACE_CITIES_QUERY_RESULT = Array<string>;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: OFFER_INVENTORY_BY_ID_QUERY
+// Query: *[_type == "foodOffer" && _id == $id][0] {    _id,    _rev,    quantity,    quantityRemaining  }
+export type OFFER_INVENTORY_BY_ID_QUERY_RESULT = {
+  _id: string;
+  _rev: string;
+  quantity: number | null;
+  quantityRemaining: number | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: OFFER_FOR_RESERVATION_BY_ID_QUERY
+// Query: *[_type == "foodOffer" && _id == $id][0] {    _id,    _rev,    name,    publicationStatus,    originalPriceAmd,    discountedPriceAmd,    quantity,    quantityRemaining,    pickupStart,    pickupEnd,    description,    "hasImage": defined(images[0].asset._ref),    "hasCategory": defined(category->name),    "establishment": establishment->{      _id,      isActive,      approvalStatus    }  }
+export type OFFER_FOR_RESERVATION_BY_ID_QUERY_RESULT = {
+  _id: string;
+  _rev: string;
+  name: string | null;
+  publicationStatus: "archived" | "draft" | "published" | null;
+  originalPriceAmd: number | null;
+  discountedPriceAmd: number | null;
+  quantity: number | null;
+  quantityRemaining: number | null;
+  pickupStart: string | null;
+  pickupEnd: string | null;
+  description: string | null;
+  hasImage: false | true;
+  hasCategory: false | true;
+  establishment: {
+    _id: string;
+    isActive: boolean | null;
+    approvalStatus: "approved" | "pending" | "rejected" | null;
+  } | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: IDEMPOTENT_RESERVATION_QUERY
+// Query: *[_type == "reservation"    && customerId == $customerId    && offer._ref == $offerId    && idempotencyKey == $idempotencyKey  ][0] {    _id,    status  }
+export type IDEMPOTENT_RESERVATION_QUERY_RESULT = {
+  _id: string;
+  status: "cancelled" | "expired" | "picked_up" | "reserved" | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: ACTIVE_RESERVATION_FOR_OFFER_QUERY
+// Query: *[_type == "reservation"    && customerId == $customerId    && offer._ref == $offerId    && status == "reserved"  ][0] {    _id  }
+export type ACTIVE_RESERVATION_FOR_OFFER_QUERY_RESULT = {
+  _id: string;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: CUSTOMER_RESERVATIONS_QUERY
+// Query: *[_type == "reservation" && customerId == $customerId]    | order(_createdAt desc) {      _id,      _createdAt,      quantity,      status,      originalPriceAmd,      discountedPriceAmd,      pickupStart,      pickupEnd,      "isCancellable": status == "reserved" && pickupEnd > now(),      "offer": offer->{        _id,        name,        "slug": slug.current,        "image": images[0] {          _key,          alt,          asset,          crop,          hotspot        },        "establishment": establishment->{          name,          "slug": slug.current,          city,          address        }      }    }
+export type CUSTOMER_RESERVATIONS_QUERY_RESULT = Array<{
+  _id: string;
+  _createdAt: string;
+  quantity: number | null;
+  status: "cancelled" | "expired" | "picked_up" | "reserved" | null;
+  originalPriceAmd: number | null;
+  discountedPriceAmd: number | null;
+  pickupStart: string | null;
+  pickupEnd: string | null;
+  isCancellable: boolean | false | null;
+  offer: {
+    _id: string;
+    name: string | null;
+    slug: string | null;
+    image: {
+      _key: string;
+      alt: string | null;
+      asset: SanityImageAssetReference | null;
+      crop: SanityImageCrop | null;
+      hotspot: SanityImageHotspot | null;
+    } | null;
+    establishment: {
+      name: string | null;
+      slug: string | null;
+      city: string | null;
+      address: Address | null;
+    } | null;
+  } | null;
+}>;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: RESERVATION_FOR_CUSTOMER_QUERY
+// Query: *[_type == "reservation"    && _id == $reservationId    && customerId == $customerId  ][0] {    _id,    _rev,    quantity,    status,    inventoryRestored,    pickupEnd,    "offerId": offer._ref  }
+export type RESERVATION_FOR_CUSTOMER_QUERY_RESULT = {
+  _id: string;
+  _rev: string;
+  quantity: number | null;
+  status: "cancelled" | "expired" | "picked_up" | "reserved" | null;
+  inventoryRestored: boolean | null;
+  pickupEnd: string | null;
+  offerId: string | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: APP_SETTINGS_QUERY
+// Query: *[_type == "appSettings" && _id == "foodsaveSettings"][0] {    _id,    _rev,    blockedUserHashes,    blockedEmailHashes  }
+export type APP_SETTINGS_QUERY_RESULT = {
+  _id: "foodsaveSettings";
+  _rev: string;
+  blockedUserHashes: Array<string> | null;
+  blockedEmailHashes: Array<string> | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: BLOCKED_USER_ACCESS_QUERY
+// Query: *[_type == "appSettings" && _id == "foodsaveSettings"][0] {    blockedUserHashes,    blockedEmailHashes  }
+export type BLOCKED_USER_ACCESS_QUERY_RESULT = {
+  blockedUserHashes: Array<string> | null;
+  blockedEmailHashes: Array<string> | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: ADMIN_ESTABLISHMENTS_QUERY
+// Query: *[_type == "establishment"] | order(name asc)[0...500] {    _id,    _rev,    name,    "slug": slug.current,    city,    ownerUserId,    isActive,    approvalStatus  }
+export type ADMIN_ESTABLISHMENTS_QUERY_RESULT = Array<{
+  _id: string;
+  _rev: string;
+  name: string | null;
+  slug: string | null;
+  city: string | null;
+  ownerUserId: string | null;
+  isActive: boolean | null;
+  approvalStatus: "approved" | "pending" | "rejected" | null;
+}>;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: ADMIN_ESTABLISHMENT_BY_ID_QUERY
+// Query: *[_type == "establishment" && _id == $id][0] {    _id,    _rev,    approvalStatus,    isActive  }
+export type ADMIN_ESTABLISHMENT_BY_ID_QUERY_RESULT = {
+  _id: string;
+  _rev: string;
+  approvalStatus: "approved" | "pending" | "rejected" | null;
+  isActive: boolean | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: ADMIN_OFFERS_QUERY
+// Query: *[_type == "foodOffer"] | order(_createdAt desc)[0...500] {    _id,    _rev,    name,    "slug": slug.current,    publicationStatus,    quantityRemaining,    pickupEnd,    "establishment": establishment->{      name,      city    }  }
+export type ADMIN_OFFERS_QUERY_RESULT = Array<{
+  _id: string;
+  _rev: string;
+  name: string | null;
+  slug: string | null;
+  publicationStatus: "archived" | "draft" | "published" | null;
+  quantityRemaining: number | null;
+  pickupEnd: string | null;
+  establishment: {
+    name: string | null;
+    city: string | null;
+  } | null;
+}>;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: ADMIN_OFFER_BY_ID_QUERY
+// Query: *[_type == "foodOffer" && _id == $id][0] {    _id,    _rev,    name,    description,    originalPriceAmd,    discountedPriceAmd,    quantity,    quantityRemaining,    pickupStart,    pickupEnd,    publicationStatus,    "hasImage": defined(images[0].asset._ref),    "hasCategory": defined(category->name),    "establishment": establishment->{      _id,      isActive,      approvalStatus    }  }
+export type ADMIN_OFFER_BY_ID_QUERY_RESULT = {
+  _id: string;
+  _rev: string;
+  name: string | null;
+  description: string | null;
+  originalPriceAmd: number | null;
+  discountedPriceAmd: number | null;
+  quantity: number | null;
+  quantityRemaining: number | null;
+  pickupStart: string | null;
+  pickupEnd: string | null;
+  publicationStatus: "archived" | "draft" | "published" | null;
+  hasImage: false | true;
+  hasCategory: false | true;
+  establishment: {
+    _id: string;
+    isActive: boolean | null;
+    approvalStatus: "approved" | "pending" | "rejected" | null;
+  } | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: ADMIN_RESERVATION_ACCOUNTS_QUERY
+// Query: *[_type == "reservation" && defined(customerId)]    | order(_createdAt desc)[0...1000] {      customerId,      customerEmail    }
+export type ADMIN_RESERVATION_ACCOUNTS_QUERY_RESULT = Array<{
+  customerId: string;
+  customerEmail: string | null;
+}>;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: BUSINESS_ESTABLISHMENTS_QUERY
+// Query: *[_type == "establishment" && ownerUserId == $ownerHash]    | order(name asc) {      _id,      _rev,      name,      "slug": slug.current,      city,      isActive,      approvalStatus,      "offers": *[_type == "foodOffer" && establishment._ref == ^._id]        | order(_createdAt desc)[0...50] {          _id,          _rev,          name,          description,          originalPriceAmd,          discountedPriceAmd,          quantity,          quantityRemaining,          pickupStart,          pickupEnd,          publicationStatus,          "hasImage": defined(images[0].asset._ref),          "hasCategory": defined(category->name),          "slug": slug.current        },      "reservations": *[_type == "reservation" && establishment._ref == ^._id]        | order(_createdAt desc)[0...100] {          _id,          _rev,          _createdAt,          quantity,          status,          pickupStart,          pickupEnd,          "canMarkPickedUp": status == "reserved"            && pickupStart <= now()            && pickupEnd > now(),          customerEmail,          "offer": offer->{name}        }    }
+export type BUSINESS_ESTABLISHMENTS_QUERY_RESULT = Array<{
+  _id: string;
+  _rev: string;
+  name: string | null;
+  slug: string | null;
+  city: string | null;
+  isActive: boolean | null;
+  approvalStatus: "approved" | "pending" | "rejected" | null;
+  offers: Array<{
+    _id: string;
+    _rev: string;
+    name: string | null;
+    description: string | null;
+    originalPriceAmd: number | null;
+    discountedPriceAmd: number | null;
+    quantity: number | null;
+    quantityRemaining: number | null;
+    pickupStart: string | null;
+    pickupEnd: string | null;
+    publicationStatus: "archived" | "draft" | "published" | null;
+    hasImage: false | true;
+    hasCategory: false | true;
+    slug: string | null;
+  }>;
+  reservations: Array<{
+    _id: string;
+    _rev: string;
+    _createdAt: string;
+    quantity: number | null;
+    status: "cancelled" | "expired" | "picked_up" | "reserved" | null;
+    pickupStart: string | null;
+    pickupEnd: string | null;
+    canMarkPickedUp: boolean | false | null;
+    customerEmail: string | null;
+    offer: {
+      name: string | null;
+    } | null;
+  }>;
+}>;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: BUSINESS_RESERVATION_BY_ID_QUERY
+// Query: *[_type == "reservation" && _id == $reservationId][0] {    _id,    _rev,    status,    pickupStart,    pickupEnd,    "establishment": establishment->{      _id,      ownerUserId    }  }
+export type BUSINESS_RESERVATION_BY_ID_QUERY_RESULT = {
+  _id: string;
+  _rev: string;
+  status: "cancelled" | "expired" | "picked_up" | "reserved" | null;
+  pickupStart: string | null;
+  pickupEnd: string | null;
+  establishment: {
+    _id: string;
+    ownerUserId: string | null;
+  } | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
+// Variable: BUSINESS_OFFER_BY_ID_QUERY
+// Query: *[_type == "foodOffer" && _id == $offerId][0] {    _id,    _rev,    name,    description,    originalPriceAmd,    discountedPriceAmd,    quantity,    quantityRemaining,    pickupStart,    pickupEnd,    publicationStatus,    "hasImage": defined(images[0].asset._ref),    "hasCategory": defined(category->name),    "establishment": establishment->{      _id,      ownerUserId,      isActive,      approvalStatus    }  }
+export type BUSINESS_OFFER_BY_ID_QUERY_RESULT = {
+  _id: string;
+  _rev: string;
+  name: string | null;
+  description: string | null;
+  originalPriceAmd: number | null;
+  discountedPriceAmd: number | null;
+  quantity: number | null;
+  quantityRemaining: number | null;
+  pickupStart: string | null;
+  pickupEnd: string | null;
+  publicationStatus: "archived" | "draft" | "published" | null;
+  hasImage: false | true;
+  hasCategory: false | true;
+  establishment: {
+    _id: string;
+    ownerUserId: string | null;
+    isActive: boolean | null;
+    approvalStatus: "approved" | "pending" | "rejected" | null;
+  } | null;
+} | null;
+
+// Source: ../app/lib/sanity/queries.ts
 // Variable: OFFER_BY_SLUG_QUERY
-// Query: *[_type == "foodOffer"    && publicationStatus == "published"    && quantityRemaining > 0    && pickupEnd > now()    && establishment->isActive == true    && establishment->approvalStatus == "approved"    && slug.current == $slug  ][0] {    _id,    name,    "slug": slug.current,    description,    originalPriceAmd,    discountedPriceAmd,    quantity,    quantityRemaining,    pickupStart,    pickupEnd,    "images": images[] {      _key,      alt,      asset,      crop,      hotspot    },    "category": category->{      _id,      name,      "slug": slug.current    },    "establishment": establishment->{      _id,      name,      "slug": slug.current,      description,      city,      address,      openingHours,      "images": images[] {        _key,        alt,        asset,        crop,        hotspot      }    }  }
+// Query: *[_type == "foodOffer"    && publicationStatus == "published"    && defined(name)    && defined(slug.current)    && defined(description)    && defined(category->name)    && defined(establishment->name)    && defined(establishment->slug.current)    && defined(images[0].asset._ref)    && quantityRemaining > 0    && quantityRemaining <= quantity    && originalPriceAmd > 0    && discountedPriceAmd > 0    && discountedPriceAmd <= originalPriceAmd    && pickupStart < pickupEnd    && pickupEnd > now()    && establishment->isActive == true    && establishment->approvalStatus == "approved"    && slug.current == $slug  ][0] {    _id,    _rev,    name,    "slug": slug.current,    description,    originalPriceAmd,    discountedPriceAmd,    quantity,    quantityRemaining,    pickupStart,    pickupEnd,    "hasImage": defined(images[0].asset._ref),    "hasCategory": defined(category->name),    "images": images[] {      _key,      alt,      asset,      crop,      hotspot    },    "category": category->{      _id,      name,      "slug": slug.current    },    "establishment": establishment->{      _id,      name,      "slug": slug.current,      description,      city,      address,      openingHours,      "images": images[] {        _key,        alt,        asset,        crop,        hotspot      }    }  }
 export type OFFER_BY_SLUG_QUERY_RESULT = {
   _id: string;
+  _rev: string;
   name: string | null;
   slug: string | null;
   description: string | null;
@@ -468,6 +825,8 @@ export type OFFER_BY_SLUG_QUERY_RESULT = {
   quantityRemaining: number | null;
   pickupStart: string | null;
   pickupEnd: string | null;
+  hasImage: false | true;
+  hasCategory: false | true;
   images: Array<{
     _key: string;
     alt: string | null;
@@ -504,7 +863,7 @@ export type OFFER_BY_SLUG_QUERY_RESULT = {
 
 // Source: ../app/lib/sanity/queries.ts
 // Variable: ESTABLISHMENT_BY_SLUG_QUERY
-// Query: *[_type == "establishment" && slug.current == $slug && isActive == true && approvalStatus == "approved"][0] {    _id,    name,    "slug": slug.current,    description,    city,    address,    coordinates,    openingHours,    "images": images[] {      _key,      alt,      asset,      crop,      hotspot    },    "category": category->{      _id,      name,      "slug": slug.current    },    "offers": *[_type == "foodOffer"      && publicationStatus == "published"      && quantityRemaining > 0      && pickupEnd > now()      && establishment._ref == ^._id    ] | order(pickupEnd asc) {      _id,      name,      "slug": slug.current,      originalPriceAmd,      discountedPriceAmd,      quantityRemaining,      pickupStart,      pickupEnd,      "images": images[] {        _key,        alt,        asset,        crop,        hotspot      }    }  }
+// Query: *[_type == "establishment"    && slug.current == $slug    && defined(name)    && defined(description)    && isActive == true    && approvalStatus == "approved"  ][0] {    _id,    name,    "slug": slug.current,    description,    city,    address,    coordinates,    openingHours,    "images": images[] {      _key,      alt,      asset,      crop,      hotspot    },    "category": category->{      _id,      name,      "slug": slug.current    },    "offers": *[_type == "foodOffer"      && publicationStatus == "published"      && defined(name)      && defined(slug.current)      && defined(description)      && defined(category->name)      && defined(images[0].asset._ref)      && defined(name)      && defined(slug.current)      && defined(description)      && quantityRemaining > 0      && quantityRemaining <= quantity      && originalPriceAmd > 0      && discountedPriceAmd > 0      && discountedPriceAmd <= originalPriceAmd      && pickupStart < pickupEnd      && pickupEnd > now()      && establishment._ref == ^._id    ] | order(pickupEnd asc) {      _id,      name,      "slug": slug.current,      originalPriceAmd,      discountedPriceAmd,      quantityRemaining,      pickupStart,      pickupEnd,      "images": images[] {        _key,        alt,        asset,        crop,        hotspot      }    }  }
 export type ESTABLISHMENT_BY_SLUG_QUERY_RESULT = {
   _id: string;
   name: string | null;
@@ -567,9 +926,27 @@ declare global {
   interface SanityQueries {
     '\n  *[_type == "homePage" && _id == "homePage"][0] {\n    brandName,\n    navigationLabel,\n    heroEyebrow,\n    heroTitleFirstLine,\n    heroTitleSecondLine,\n    heroDescription,\n    heroCta,\n    heroNote,\n    artAlt,\n    artLabelFirstLine,\n    artLabelSecondLine,\n    artCaption,\n    artNumber,\n    introEyebrow,\n    introTitleFirstLine,\n    introTitleSecondLine,\n    "benefits": benefits[] {\n      _key,\n      number,\n      title,\n      description\n    },\n    footerMessage,\n    footerCredit,\n    seoTitle,\n    seoDescription\n  }\n': HOME_PAGE_QUERY_RESULT;
     '\n  *[_type == "foodCategory"] | order(sortOrder asc, name asc) {\n    _id,\n    name,\n    "slug": slug.current,\n    description,\n    sortOrder\n  }\n': FOOD_CATEGORIES_QUERY_RESULT;
-    '\n  *[_type == "foodOffer"\n    && publicationStatus == "published"\n    && quantityRemaining > 0\n    && pickupEnd > now()\n    && establishment->isActive == true\n    && establishment->approvalStatus == "approved"\n  ] | order(pickupEnd asc) {\n    _id,\n    name,\n    "slug": slug.current,\n    description,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    "images": images[] {\n      _key,\n      alt,\n      asset,\n      crop,\n      hotspot\n    },\n    "category": category->{\n      _id,\n      name,\n      "slug": slug.current\n    },\n    "establishment": establishment->{\n      _id,\n      name,\n      "slug": slug.current,\n      city,\n      "image": images[0] {\n        _key,\n        alt,\n        asset,\n        crop,\n        hotspot\n      }\n    }\n  }\n': MARKETPLACE_OFFERS_QUERY_RESULT;
-    '\n  *[_type == "foodOffer"\n    && publicationStatus == "published"\n    && quantityRemaining > 0\n    && pickupEnd > now()\n    && establishment->isActive == true\n    && establishment->approvalStatus == "approved"\n    && slug.current == $slug\n  ][0] {\n    _id,\n    name,\n    "slug": slug.current,\n    description,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantity,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    "images": images[] {\n      _key,\n      alt,\n      asset,\n      crop,\n      hotspot\n    },\n    "category": category->{\n      _id,\n      name,\n      "slug": slug.current\n    },\n    "establishment": establishment->{\n      _id,\n      name,\n      "slug": slug.current,\n      description,\n      city,\n      address,\n      openingHours,\n      "images": images[] {\n        _key,\n        alt,\n        asset,\n        crop,\n        hotspot\n      }\n    }\n  }\n': OFFER_BY_SLUG_QUERY_RESULT;
-    '\n  *[_type == "establishment" && slug.current == $slug && isActive == true && approvalStatus == "approved"][0] {\n    _id,\n    name,\n    "slug": slug.current,\n    description,\n    city,\n    address,\n    coordinates,\n    openingHours,\n    "images": images[] {\n      _key,\n      alt,\n      asset,\n      crop,\n      hotspot\n    },\n    "category": category->{\n      _id,\n      name,\n      "slug": slug.current\n    },\n    "offers": *[_type == "foodOffer"\n      && publicationStatus == "published"\n      && quantityRemaining > 0\n      && pickupEnd > now()\n      && establishment._ref == ^._id\n    ] | order(pickupEnd asc) {\n      _id,\n      name,\n      "slug": slug.current,\n      originalPriceAmd,\n      discountedPriceAmd,\n      quantityRemaining,\n      pickupStart,\n      pickupEnd,\n      "images": images[] {\n        _key,\n        alt,\n        asset,\n        crop,\n        hotspot\n      }\n    }\n  }\n': ESTABLISHMENT_BY_SLUG_QUERY_RESULT;
+    '\n  *[_type == "foodOffer"\n    && publicationStatus == "published"\n    && defined(name)\n    && defined(slug.current)\n    && defined(description)\n    && defined(category->name)\n    && defined(establishment->name)\n    && defined(establishment->slug.current)\n    && defined(images[0].asset._ref)\n    && quantityRemaining > 0\n    && quantityRemaining <= quantity\n    && originalPriceAmd > 0\n    && discountedPriceAmd > 0\n    && discountedPriceAmd <= originalPriceAmd\n    && pickupStart < pickupEnd\n    && pickupEnd > now()\n    && establishment->isActive == true\n    && establishment->approvalStatus == "approved"\n    && (!defined($category) || category->slug.current == $category)\n    && (!defined($city) || establishment->city == $city)\n    && (!defined($search) || name match $search || description match $search || establishment->name match $search)\n  ] | order(\n    select(\n      $sort == "price-low" => discountedPriceAmd,\n      $sort == "price-high" => 0 - discountedPriceAmd,\n      pickupStart\n    ) asc\n  ) {\n    _id,\n    name,\n    "slug": slug.current,\n    description,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    "images": images[] {\n      _key,\n      alt,\n      asset,\n      crop,\n      hotspot\n    },\n    "category": category->{\n      _id,\n      name,\n      "slug": slug.current\n    },\n    "establishment": establishment->{\n      _id,\n      name,\n      "slug": slug.current,\n      city,\n      address,\n      "image": images[0] {\n        _key,\n        alt,\n        asset,\n        crop,\n        hotspot\n      }\n    }\n  }[0...48]\n': MARKETPLACE_OFFERS_QUERY_RESULT;
+    '\n  *[_type == "foodOffer"\n    && publicationStatus == "published"\n    && defined(name)\n    && defined(slug.current)\n    && defined(description)\n    && defined(category->name)\n    && defined(establishment->name)\n    && defined(establishment->slug.current)\n    && defined(images[0].asset._ref)\n    && quantityRemaining > 0\n    && quantityRemaining <= quantity\n    && originalPriceAmd > 0\n    && discountedPriceAmd > 0\n    && discountedPriceAmd <= originalPriceAmd\n    && pickupStart < pickupEnd\n    && pickupEnd > now()\n    && establishment->isActive == true\n    && establishment->approvalStatus == "approved"\n  ] | order(_createdAt desc)[0...6] {\n    _id,\n    name,\n    "slug": slug.current,\n    description,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    "images": images[] {\n      _key,\n      alt,\n      asset,\n      crop,\n      hotspot\n    },\n    "category": category->{\n      _id,\n      name,\n      "slug": slug.current\n    },\n    "establishment": establishment->{\n      _id,\n      name,\n      "slug": slug.current,\n      city,\n      "image": images[0] {\n        _key,\n        alt,\n        asset,\n        crop,\n        hotspot\n      }\n    }\n  }\n': FEATURED_OFFERS_QUERY_RESULT;
+    '\n  array::unique(*[\n    _type == "establishment"\n    && isActive == true\n    && approvalStatus == "approved"\n    && defined(city)\n  ].city) | order(@ asc)\n': MARKETPLACE_CITIES_QUERY_RESULT;
+    '\n  *[_type == "foodOffer" && _id == $id][0] {\n    _id,\n    _rev,\n    quantity,\n    quantityRemaining\n  }\n': OFFER_INVENTORY_BY_ID_QUERY_RESULT;
+    '\n  *[_type == "foodOffer" && _id == $id][0] {\n    _id,\n    _rev,\n    name,\n    publicationStatus,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantity,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    description,\n    "hasImage": defined(images[0].asset._ref),\n    "hasCategory": defined(category->name),\n    "establishment": establishment->{\n      _id,\n      isActive,\n      approvalStatus\n    }\n  }\n': OFFER_FOR_RESERVATION_BY_ID_QUERY_RESULT;
+    '\n  *[_type == "reservation"\n    && customerId == $customerId\n    && offer._ref == $offerId\n    && idempotencyKey == $idempotencyKey\n  ][0] {\n    _id,\n    status\n  }\n': IDEMPOTENT_RESERVATION_QUERY_RESULT;
+    '\n  *[_type == "reservation"\n    && customerId == $customerId\n    && offer._ref == $offerId\n    && status == "reserved"\n  ][0] {\n    _id\n  }\n': ACTIVE_RESERVATION_FOR_OFFER_QUERY_RESULT;
+    '\n  *[_type == "reservation" && customerId == $customerId]\n    | order(_createdAt desc) {\n      _id,\n      _createdAt,\n      quantity,\n      status,\n      originalPriceAmd,\n      discountedPriceAmd,\n      pickupStart,\n      pickupEnd,\n      "isCancellable": status == "reserved" && pickupEnd > now(),\n      "offer": offer->{\n        _id,\n        name,\n        "slug": slug.current,\n        "image": images[0] {\n          _key,\n          alt,\n          asset,\n          crop,\n          hotspot\n        },\n        "establishment": establishment->{\n          name,\n          "slug": slug.current,\n          city,\n          address\n        }\n      }\n    }\n': CUSTOMER_RESERVATIONS_QUERY_RESULT;
+    '\n  *[_type == "reservation"\n    && _id == $reservationId\n    && customerId == $customerId\n  ][0] {\n    _id,\n    _rev,\n    quantity,\n    status,\n    inventoryRestored,\n    pickupEnd,\n    "offerId": offer._ref\n  }\n': RESERVATION_FOR_CUSTOMER_QUERY_RESULT;
+    '\n  *[_type == "appSettings" && _id == "foodsaveSettings"][0] {\n    _id,\n    _rev,\n    blockedUserHashes,\n    blockedEmailHashes\n  }\n': APP_SETTINGS_QUERY_RESULT;
+    '\n  *[_type == "appSettings" && _id == "foodsaveSettings"][0] {\n    blockedUserHashes,\n    blockedEmailHashes\n  }\n': BLOCKED_USER_ACCESS_QUERY_RESULT;
+    '\n  *[_type == "establishment"] | order(name asc)[0...500] {\n    _id,\n    _rev,\n    name,\n    "slug": slug.current,\n    city,\n    ownerUserId,\n    isActive,\n    approvalStatus\n  }\n': ADMIN_ESTABLISHMENTS_QUERY_RESULT;
+    '\n  *[_type == "establishment" && _id == $id][0] {\n    _id,\n    _rev,\n    approvalStatus,\n    isActive\n  }\n': ADMIN_ESTABLISHMENT_BY_ID_QUERY_RESULT;
+    '\n  *[_type == "foodOffer"] | order(_createdAt desc)[0...500] {\n    _id,\n    _rev,\n    name,\n    "slug": slug.current,\n    publicationStatus,\n    quantityRemaining,\n    pickupEnd,\n    "establishment": establishment->{\n      name,\n      city\n    }\n  }\n': ADMIN_OFFERS_QUERY_RESULT;
+    '\n  *[_type == "foodOffer" && _id == $id][0] {\n    _id,\n    _rev,\n    name,\n    description,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantity,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    publicationStatus,\n    "hasImage": defined(images[0].asset._ref),\n    "hasCategory": defined(category->name),\n    "establishment": establishment->{\n      _id,\n      isActive,\n      approvalStatus\n    }\n  }\n': ADMIN_OFFER_BY_ID_QUERY_RESULT;
+    '\n  *[_type == "reservation" && defined(customerId)]\n    | order(_createdAt desc)[0...1000] {\n      customerId,\n      customerEmail\n    }\n': ADMIN_RESERVATION_ACCOUNTS_QUERY_RESULT;
+    '\n  *[_type == "establishment" && ownerUserId == $ownerHash]\n    | order(name asc) {\n      _id,\n      _rev,\n      name,\n      "slug": slug.current,\n      city,\n      isActive,\n      approvalStatus,\n      "offers": *[_type == "foodOffer" && establishment._ref == ^._id]\n        | order(_createdAt desc)[0...50] {\n          _id,\n          _rev,\n          name,\n          description,\n          originalPriceAmd,\n          discountedPriceAmd,\n          quantity,\n          quantityRemaining,\n          pickupStart,\n          pickupEnd,\n          publicationStatus,\n          "hasImage": defined(images[0].asset._ref),\n          "hasCategory": defined(category->name),\n          "slug": slug.current\n        },\n      "reservations": *[_type == "reservation" && establishment._ref == ^._id]\n        | order(_createdAt desc)[0...100] {\n          _id,\n          _rev,\n          _createdAt,\n          quantity,\n          status,\n          pickupStart,\n          pickupEnd,\n          "canMarkPickedUp": status == "reserved"\n            && pickupStart <= now()\n            && pickupEnd > now(),\n          customerEmail,\n          "offer": offer->{name}\n        }\n    }\n': BUSINESS_ESTABLISHMENTS_QUERY_RESULT;
+    '\n  *[_type == "reservation" && _id == $reservationId][0] {\n    _id,\n    _rev,\n    status,\n    pickupStart,\n    pickupEnd,\n    "establishment": establishment->{\n      _id,\n      ownerUserId\n    }\n  }\n': BUSINESS_RESERVATION_BY_ID_QUERY_RESULT;
+    '\n  *[_type == "foodOffer" && _id == $offerId][0] {\n    _id,\n    _rev,\n    name,\n    description,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantity,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    publicationStatus,\n    "hasImage": defined(images[0].asset._ref),\n    "hasCategory": defined(category->name),\n    "establishment": establishment->{\n      _id,\n      ownerUserId,\n      isActive,\n      approvalStatus\n    }\n  }\n': BUSINESS_OFFER_BY_ID_QUERY_RESULT;
+    '\n  *[_type == "foodOffer"\n    && publicationStatus == "published"\n    && defined(name)\n    && defined(slug.current)\n    && defined(description)\n    && defined(category->name)\n    && defined(establishment->name)\n    && defined(establishment->slug.current)\n    && defined(images[0].asset._ref)\n    && quantityRemaining > 0\n    && quantityRemaining <= quantity\n    && originalPriceAmd > 0\n    && discountedPriceAmd > 0\n    && discountedPriceAmd <= originalPriceAmd\n    && pickupStart < pickupEnd\n    && pickupEnd > now()\n    && establishment->isActive == true\n    && establishment->approvalStatus == "approved"\n    && slug.current == $slug\n  ][0] {\n    _id,\n    _rev,\n    name,\n    "slug": slug.current,\n    description,\n    originalPriceAmd,\n    discountedPriceAmd,\n    quantity,\n    quantityRemaining,\n    pickupStart,\n    pickupEnd,\n    "hasImage": defined(images[0].asset._ref),\n    "hasCategory": defined(category->name),\n    "images": images[] {\n      _key,\n      alt,\n      asset,\n      crop,\n      hotspot\n    },\n    "category": category->{\n      _id,\n      name,\n      "slug": slug.current\n    },\n    "establishment": establishment->{\n      _id,\n      name,\n      "slug": slug.current,\n      description,\n      city,\n      address,\n      openingHours,\n      "images": images[] {\n        _key,\n        alt,\n        asset,\n        crop,\n        hotspot\n      }\n    }\n  }\n': OFFER_BY_SLUG_QUERY_RESULT;
+    '\n  *[_type == "establishment"\n    && slug.current == $slug\n    && defined(name)\n    && defined(description)\n    && isActive == true\n    && approvalStatus == "approved"\n  ][0] {\n    _id,\n    name,\n    "slug": slug.current,\n    description,\n    city,\n    address,\n    coordinates,\n    openingHours,\n    "images": images[] {\n      _key,\n      alt,\n      asset,\n      crop,\n      hotspot\n    },\n    "category": category->{\n      _id,\n      name,\n      "slug": slug.current\n    },\n    "offers": *[_type == "foodOffer"\n      && publicationStatus == "published"\n      && defined(name)\n      && defined(slug.current)\n      && defined(description)\n      && defined(category->name)\n      && defined(images[0].asset._ref)\n      && defined(name)\n      && defined(slug.current)\n      && defined(description)\n      && quantityRemaining > 0\n      && quantityRemaining <= quantity\n      && originalPriceAmd > 0\n      && discountedPriceAmd > 0\n      && discountedPriceAmd <= originalPriceAmd\n      && pickupStart < pickupEnd\n      && pickupEnd > now()\n      && establishment._ref == ^._id\n    ] | order(pickupEnd asc) {\n      _id,\n      name,\n      "slug": slug.current,\n      originalPriceAmd,\n      discountedPriceAmd,\n      quantityRemaining,\n      pickupStart,\n      pickupEnd,\n      "images": images[] {\n        _key,\n        alt,\n        asset,\n        crop,\n        hotspot\n      }\n    }\n  }\n': ESTABLISHMENT_BY_SLUG_QUERY_RESULT;
     '\n  *[_type == "editorialPage" && slug.current == $slug][0] {\n    _id,\n    title,\n    "slug": slug.current,\n    summary,\n    body,\n    seoTitle,\n    seoDescription\n  }\n': EDITORIAL_PAGE_BY_SLUG_QUERY_RESULT;
   }
 }

@@ -25,8 +25,14 @@ export function Footer({
       </Link>
       <p>{footerMessage}</p>
       <span>{footerCredit}</span>
-      <Link className="footer-admin-link" href="/admin">
+      <a className="footer-admin-link" href="http://localhost:3333/admin">
         Admin
+      </a>
+      <Link className="footer-admin-link" href="/business">
+        Business
+      </Link>
+      <Link className="footer-admin-link" href="/admin-dashboard" prefetch={false}>
+        Admin dashboard
       </Link>
     </footer>
   );

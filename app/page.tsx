@@ -1,9 +1,16 @@
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { getHomePageContent } from "./lib/home-page";
+import { OfferCard } from "./components/marketplace/OfferCard";
+import { getFeaturedOffers, getFoodCategories } from "./lib/marketplace";
+import Link from "next/link";
 
 export default async function Home() {
-  const homePage = await getHomePageContent();
+  const [homePage, featuredOffers, categories] = await Promise.all([
+    getHomePageContent(),
+    getFeaturedOffers(),
+    getFoodCategories(),
+  ]);
   const benefits = homePage.benefits;
 
   return (
@@ -25,9 +32,24 @@ export default async function Home() {
             <span>{homePage.heroTitleSecondLine}</span>
           </h1>
           <p className="hero-description">{homePage.heroDescription}</p>
-          <a className="primary-link" href="#how-it-works">
+          <form className="hero-search" action="/explore" method="get">
+            <label className="visually-hidden" htmlFor="home-search">
+              Search food or a local shop
+            </label>
+            <input
+              id="home-search"
+              type="search"
+              name="q"
+              placeholder="Try bakery, lunch, coffee..."
+              maxLength={80}
+            />
+            <button type="submit" aria-label="Search offers">
+              <span aria-hidden="true">⌕</span>
+            </button>
+          </form>
+          <Link className="primary-link" href="/explore">
             {homePage.heroCta} <span aria-hidden="true">→</span>
-          </a>
+          </Link>
           <p className="hero-note">{homePage.heroNote}</p>
         </div>
 
@@ -47,6 +69,74 @@ export default async function Home() {
           <span className="art-caption">{homePage.artCaption}</span>
           <span className="art-number">{homePage.artNumber}</span>
         </div>
+      </section>
+
+      <section className="marketplace-section" aria-labelledby="categories-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">A good thing is around the corner</p>
+            <h2 id="categories-title">Shop by craving</h2>
+          </div>
+          <Link className="text-link" href="/explore">
+            Explore everything <span aria-hidden="true">↗</span>
+          </Link>
+        </div>
+        {categories.length ? (
+          <div className="category-list">
+            {categories.map((category) =>
+              category.name && category.slug ? (
+                <Link
+                  className="category-chip"
+                  href={`/explore?category=${encodeURIComponent(category.slug)}`}
+                  key={category._id}
+                >
+                  <span className="category-chip-icon" aria-hidden="true">
+                    ✳
+                  </span>
+                  <span>{category.name}</span>
+                  <span className="category-chip-arrow" aria-hidden="true">
+                    ↗
+                  </span>
+                </Link>
+              ) : null,
+            )}
+          </div>
+        ) : (
+          <p className="marketplace-hint">
+            Our local food partners are getting ready. Check back soon for
+            today&apos;s finds.
+          </p>
+        )}
+      </section>
+
+      <section className="marketplace-section featured-section" id="featured" aria-labelledby="featured-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Fresh chances, every day</p>
+            <h2 id="featured-title">Today&apos;s good finds</h2>
+          </div>
+          <Link className="text-link" href="/explore">
+            See all offers <span aria-hidden="true">↗</span>
+          </Link>
+        </div>
+        {featuredOffers.length ? (
+          <div className="offer-grid">
+            {featuredOffers.map((offer) => (
+              <OfferCard key={offer._id} offer={offer} />
+            ))}
+          </div>
+        ) : (
+          <div className="marketplace-empty">
+            <span className="marketplace-empty-mark" aria-hidden="true">
+              ✳
+            </span>
+            <h3>Good things are on their way</h3>
+            <p>
+              We&apos;re welcoming local food makers to FoodSave. New offers
+              will appear here as soon as they&apos;re ready.
+            </p>
+          </div>
+        )}
       </section>
 
       <section
